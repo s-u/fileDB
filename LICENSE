@@ -1,0 +1,7 @@
+The code in 'src/look.c' is a m100ddodifcation of the BSD
+look function, released by The Regents of the University
+of California and originally developed by David Hitz of
+Auspex Systems, Inc. 
+
+All other code was produced by Taylor Arnold, and is
+released under a GPL-2 licence.

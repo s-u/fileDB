@@ -1,0 +1,17 @@
+Package: fileDB
+Type: Package
+Title: Binary Search on Flat Files
+Version: 1.0
+Authors@R: c(person("Taylor", "Arnold", role = c("aut", "cre"),
+                    email = "taylor.arnold@acm.org"),
+             person("David", "Hitz", role = c("ctb", "cph"),
+                    comment = "Auspex Systems, Inc."))
+Date: 2015-05-06
+Author: Taylor Arnold [aut, cre], David Hitz [ctb, cph] (Auspex Systems, Inc.)
+Maintainer: Taylor Arnold <taylor.arnold@acm.org>
+Description: Constructs a plain text, pipe-deliminated file from an R data
+  frame that allows for fast searching via binary search on a primary key.
+  Scan queries are supported, as is reading the resulting data set using
+  standard methods for reading deliminated files.
+License: GPL-2 + LICENSE
+Imports: iotools

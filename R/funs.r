@@ -1,0 +1,189 @@
+#' Display lines of a file
+#'
+#' This function provides a more direct analogue to the
+#' BSD function 'look' for users looking for more control
+#' on the output. The file must be pre-sorted on the row
+#' prefixes
+#'
+#' @importFrom      iotools dstrsplit
+#' @useDynLib       fileDB call_look
+#' @param file      name of the file to search within
+#' @param key       a length one character vector; the key
+#'                  to search for.
+#' @param keyEnd    an optional length one character vector;
+#'                  if set, results will be given for all rows
+#'                  with starting characters between key and keyEnd
+#' @param dflag     logical; flag for whether only alphanumeric
+#'                  characters are being searched over. When set,
+#'                  the function will run slightly more efficiently.
+#' @param skip      number of rows to skip in the input file; these do
+#'                  not need to be sorted (i.e., a row of headers or
+#'                  rows of comments)
+#' @param raw       logical. Should results be returned as a raw
+#'                  vector, or a character vector split by newline
+#'                  characters.
+#' @export
+look = function(file, key, keyEnd=NULL, dflag=FALSE, skip=0L,
+                raw=FALSE) {
+  file = Sys.glob(file[[1]])
+  key = key[[1]]
+
+  if (!file.exists(file <- as.character(file)))
+    stop("file does not point to a valid file")
+  if (length(key <- as.character(key)) != 1) {
+    if (length(key) == 0) stop("invalid key")
+    key = key[[1]]
+    warning("Key truncated; only using first key")
+  }
+  if (is.null(keyEnd))
+    keyEnd = key
+  else if (length(keyEnd <- as.character(keyEnd)) != 1) {
+    if (length(keyEnd) == 0) stop("invalid key")
+    keyEnd = keyEnd[[1]]
+    warning("keyEnd truncated; only using first keyEnd")
+  }
+
+  if (!(dflag <- as.integer(dflag[1]) %in% c(0L,1L)))
+    stop("Invalid dflag")
+
+  z = .Call(call_look, file, key, keyEnd, skip, dflag)
+  if (raw) return(z) else unlist(strsplit(rawToChar(z),"\n"))
+}
+
+#' Search for key in fileDB file
+#'
+#' This function provides a means for searching a sorted
+#' flat file constructed by \code{\link{saveAsFileDB}}.
+#' Use \code{link{scan}} for a range query.
+#'
+#' @importFrom       iotools dstrsplit
+#' @useDynLib        fileDB call_look
+#' @param file       name of the file to search within
+#' @param key        a length one character vector; the key
+#'                   to search for.
+#' @param formatter  function which accepts a raw vector and
+#'                   returns the results. If missing, this will
+#'                   by constructed via the file metadata.
+#' @export
+search = function(file, key, formatter) {
+  file = Sys.glob(file[[1]])
+  key = key[[1]]
+
+  if (!file.exists(file <- as.character(file)))
+    stop("file does not point to a valid file")
+  if (length(key <- as.character(key)) != 1) {
+    if (length(key) == 0) stop("invalid key")
+    key = key[[1]]
+    warning("Key truncated; only using first key")
+  }
+
+  # Read metadata
+  if (missing(formatter)) {
+    h = readLines("test.txt",2L)
+    h[1] = substr(h[1],4L, nchar(h[1]))
+    h = strsplit(h,"\\|")
+    names(h[[1]]) = h[[2]]
+    formatter = function(v) iotools::dstrsplit(v, col_types=h[[1]])
+  }
+
+  z = .Call(call_look, file, key, key, 2L, 0L)
+  formatter(z)
+}
+
+#' Scan for key in fileDB file
+#'
+#' This function provides a means for scan a sorted
+#' flat file constructed by \code{\link{saveAsFileDB}},
+#' returning all rows with prefixes between two keys.
+#'
+#' @importFrom       iotools dstrsplit
+#' @useDynLib        fileDB call_look
+#' @param file       name of the file to search within
+#' @param keyStart   a length one character vector; the key
+#'                   to start searching for.
+#' @param keyEnd     a length one character vector; the key
+#'                   to start searching for. Results will be
+#'                   given for all rows with starting characters
+#'                   between keyStart and keyEnd
+#' @param formatter  function which accepts a raw vector and
+#'                   returns the results. If missing, this will
+#'                   by constructed via the file metadata.
+#' @export
+scan = function(file, keyStart, keyEnd, formatter) {
+  file = Sys.glob(file[[1]])
+  keyStart = keyStart[[1]]
+
+  if (!file.exists(file <- as.character(file)))
+    stop("file does not point to a valid file")
+  if (length(keyStart <- as.character(keyStart)) != 1) {
+    if (length(keyStart) == 0) stop("invalid keyStart")
+    keyStart = keyStart[[1]]
+    warning("Key truncated; only using first keyStart")
+  }
+  if (length(keyEnd <- as.character(keyEnd)) != 1) {
+    if (length(keyEnd) == 0) stop("invalid keyEnd")
+    keyEnd = keyEnd[[1]]
+    warning("Key truncated; only using first keyEnd")
+  }
+
+  # Read metadata
+  if (missing(formatter)) {
+    h = readLines("test.txt",2L)
+    h[1] = substr(h[1],4L, nchar(h[1]))
+    h = strsplit(h,"\\|")
+    names(h[[1]]) = h[[2]]
+    formatter = function(v) iotools::dstrsplit(v, col_types=h[[1]])
+  }
+
+  z = .Call(call_look, file, keyStart, keyEnd, 2L, 0L)
+  formatter(z)
+}
+
+#' Save a data frame as fileDB file
+#'
+#' This function saves a data frame as a flat file
+#' that can be searched using \code{\link{scan}}
+#' and \code{\link{search}}. The first row of the
+#' output is a commented out string of column types;
+#' the second row are column names and the remainder
+#' is a pipe-deliminated file. Conveniently, this can
+#' also be read back in using \code{\link{read.table}},
+#' by setting sep='|'.
+#'
+#' @importFrom       iotools as.output.data.frame
+#' @param df         data frame to write to disk. First column
+#'                   will be 'indexed'; must be a character or
+#'                   factor as numerics will not sort correctly
+#'                   unless they all have the same number of digits
+#' @param file       name of the file to store the results in.
+#' @export
+saveAsFileDB = function(df, file) {
+  if (!is.data.frame(df))
+    stop("df must be a data frame")
+
+  df = df[order(df[,1]),]
+  r = iotools::as.output.data.frame(df,keys=FALSE)
+  con = file(description=file, open="wb")
+  on.exit(close(con))
+
+  classes = sapply(df, function(v) class(v[[1]]))
+  classes[classes == "factor"] = "character"
+  classTypes = c("logical", "integer", "numeric", "complex",
+                 "character", "raw", "POSIXct")
+
+  if (!all(classes %in% classTypes))
+    stop("Cannot save a dataframe with these types.")
+  if (classes[1] != "character")
+    stop("First column, the one which is sorted on",
+         "must be of type 'character' or 'factor'")
+
+  writeBin(charToRaw("###"), con)
+  writeBin(charToRaw(paste(classes,collapse="|")), con)
+  writeBin(charToRaw("\n"), con)
+
+  writeBin(charToRaw(paste(names(df),collapse="|")), con)
+  writeBin(charToRaw("\n"), con)
+
+  writeBin(r, con)
+}
+
