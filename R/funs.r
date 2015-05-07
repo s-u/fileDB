@@ -5,26 +5,28 @@
 #' on the output. The file must be pre-sorted on the row
 #' prefixes
 #'
-#' @importFrom      iotools dstrsplit
-#' @useDynLib       fileDB call_look
-#' @param file      name of the file to search within
-#' @param key       a length one character vector; the key
-#'                  to search for.
-#' @param keyEnd    an optional length one character vector;
-#'                  if set, results will be given for all rows
-#'                  with starting characters between key and keyEnd
-#' @param dflag     logical; flag for whether only alphanumeric
-#'                  characters are being searched over. When set,
-#'                  the function will run slightly more efficiently.
-#' @param skip      number of rows to skip in the input file; these do
-#'                  not need to be sorted (i.e., a row of headers or
-#'                  rows of comments)
-#' @param raw       logical. Should results be returned as a raw
-#'                  vector, or a character vector split by newline
-#'                  characters.
+#' @importFrom       iotools dstrsplit
+#' @useDynLib        fileDB call_look
+#' @param file       name of the file to search within
+#' @param key        a length one character vector; the key
+#'                   to search for.
+#' @param keyEnd     an optional length one character vector;
+#'                   if set, results will be given for all rows
+#'                   with starting characters between key and keyEnd
+#' @param dflag      logical; flag for whether only alphanumeric
+#'                   characters are being searched over. When set,
+#'                   the function will run slightly more efficiently.
+#' @param skip       number of rows to skip in the input file; these do
+#'                   not need to be sorted (i.e., a row of headers or
+#'                   rows of comments)
+#' @param maxLines   maximum number of lines to return. Set to Inf
+#'                   or -1 to return all lines.
+#' @param raw        logical. Should results be returned as a raw
+#'                   vector, or a character vector split by newline
+#'                   characters.
 #' @export
 look = function(file, key, keyEnd=NULL, dflag=FALSE, skip=0L,
-                raw=FALSE) {
+                maxLines = -1L, raw=FALSE) {
   file = Sys.glob(file[[1]])
   key = key[[1]]
 
@@ -42,11 +44,13 @@ look = function(file, key, keyEnd=NULL, dflag=FALSE, skip=0L,
     keyEnd = keyEnd[[1]]
     warning("keyEnd truncated; only using first keyEnd")
   }
+  if (!is.finite(maxLines <- maxLines[[1]])) maxLines = -1L
+  maxLines = as.integer(maxLines[[1]])
 
   if (!(dflag <- as.integer(dflag[1]) %in% c(0L,1L)))
     stop("Invalid dflag")
 
-  z = .Call(call_look, file, key, keyEnd, skip, dflag)
+  z = .Call(call_look, file, key, keyEnd, skip, maxLines, dflag)
   if (raw) return(z) else unlist(strsplit(rawToChar(z),"\n"))
 }
 
@@ -64,12 +68,14 @@ look = function(file, key, keyEnd=NULL, dflag=FALSE, skip=0L,
 #' @param formatter  function which accepts a raw vector and
 #'                   returns the results. If missing, this will
 #'                   by constructed via the file metadata.
+#' @param maxLines   maximum number of lines to return. Set to Inf
+#'                   or -1 to return all lines.
 #' @param header     logical. Whether file has a head of information,
 #'                   as supplied by the function saveAsFileDB. When
 #'                   missing, will be infered from the first line of
 #'                   the file.
 #' @export
-searchFile = function(file, key, formatter, header) {
+searchFile = function(file, key, formatter, maxLines=100L, header) {
   file = Sys.glob(file[[1]])
   key = key[[1]]
 
@@ -80,6 +86,8 @@ searchFile = function(file, key, formatter, header) {
     key = key[[1]]
     warning("Key truncated; only using first key")
   }
+  if (!is.finite(maxLines <- maxLines[[1]])) maxLines = -1L
+  maxLines = as.integer(maxLines[[1]])
 
   # Header / Metadata
   h = readLines(file,2L)
@@ -89,7 +97,8 @@ searchFile = function(file, key, formatter, header) {
 
   if (missing(formatter)) {
     if (!header)
-      formatter = function(v) iotools::mstrsplit(v)
+      formatter = function(v)
+        iotools::mstrsplit(unlist(strsplit(rawToChar(v),"\n")))
     else {
       h[1] = substr(h[1],4L, nchar(h[1]))
       h = strsplit(h,"\\|")
@@ -98,7 +107,7 @@ searchFile = function(file, key, formatter, header) {
     }
   }
 
-  z = .Call(call_look, file, key, key, 2L, 0L)
+  z = .Call(call_look, file, key, key, 2L*header, maxLines, 0L)
   formatter(z)
 }
 
@@ -120,12 +129,15 @@ searchFile = function(file, key, formatter, header) {
 #' @param formatter  function which accepts a raw vector and
 #'                   returns the results. If missing, this will
 #'                   by constructed via the file metadata.
+#' @param maxLines   maximum number of lines to return. Set to Inf
+#'                   or -1 to return all lines.
 #' @param header     logical. Whether file has a head of information,
 #'                   as supplied by the function saveAsFileDB. When
 #'                   missing, will be infered from the first line of
 #'                   the file.
 #' @export
-scanFile = function(file, keyStart, keyEnd, formatter, header) {
+scanFile = function(file, keyStart, keyEnd, formatter,
+                    maxLines=100L, header) {
   file = Sys.glob(file[[1]])
   keyStart = keyStart[[1]]
 
@@ -141,6 +153,8 @@ scanFile = function(file, keyStart, keyEnd, formatter, header) {
     keyEnd = keyEnd[[1]]
     warning("Key truncated; only using first keyEnd")
   }
+  if (!is.finite(maxLines <- maxLines[[1]])) maxLines = -1L
+  maxLines = as.integer(maxLines[[1]])
 
   # Header / Metadata
   h = readLines(file,2L)
@@ -150,7 +164,8 @@ scanFile = function(file, keyStart, keyEnd, formatter, header) {
 
   if (missing(formatter)) {
     if (!header)
-      formatter = function(v) iotools::mstrsplit(v)
+      formatter = function(v)
+        iotools::mstrsplit(unlist(strsplit(rawToChar(v),"\n")))
     else {
       h[1] = substr(h[1],4L, nchar(h[1]))
       h = strsplit(h,"\\|")
@@ -159,7 +174,7 @@ scanFile = function(file, keyStart, keyEnd, formatter, header) {
     }
   }
 
-  z = .Call(call_look, file, keyStart, keyEnd, 2L*header, 0L)
+  z = .Call(call_look, file, keyStart, keyEnd, 2L*header, maxLines, 0L)
   formatter(z)
 }
 

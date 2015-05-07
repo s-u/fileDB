@@ -4,7 +4,7 @@
 \alias{searchFile}
 \title{Search for key in fileDB file}
 \usage{
-searchFile(file, key, formatter, header)
+searchFile(file, key, formatter, maxLines = 100L, header)
 }
 \arguments{
 \item{file}{name of the file to search within}
@@ -15,6 +15,9 @@ to search for.}
 \item{formatter}{function which accepts a raw vector and
 returns the results. If missing, this will
 by constructed via the file metadata.}
+
+\item{maxLines}{maximum number of lines to return. Set to Inf
+or -1 to return all lines.}
 
 \item{header}{logical. Whether file has a head of information,
 as supplied by the function saveAsFileDB. When

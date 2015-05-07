@@ -4,7 +4,8 @@
 \alias{look}
 \title{Display lines of a file}
 \usage{
-look(file, key, keyEnd = NULL, dflag = FALSE, skip = 0L, raw = FALSE)
+look(file, key, keyEnd = NULL, dflag = FALSE, skip = 0L, maxLines = -1L,
+  raw = FALSE)
 }
 \arguments{
 \item{file}{name of the file to search within}
@@ -23,6 +24,9 @@ the function will run slightly more efficiently.}
 \item{skip}{number of rows to skip in the input file; these do
 not need to be sorted (i.e., a row of headers or
 rows of comments)}
+
+\item{maxLines}{maximum number of lines to return. Set to Inf
+or -1 to return all lines.}
 
 \item{raw}{logical. Should results be returned as a raw
 vector, or a character vector split by newline

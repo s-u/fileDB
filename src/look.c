@@ -63,7 +63,8 @@ int              compare(wchar_t *, unsigned char *, unsigned char *);
 unsigned char    *linear_search(wchar_t *, unsigned char *, unsigned char *);
 wchar_t          *prepkey(const char *, wchar_t);
 
-SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sDflag)  {
+SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sMaxLines,
+                SEXP sDflag)  {
 
   SEXP output = PROTECT(allocVector(RAWSXP, 0));
 
@@ -72,7 +73,9 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sDflag) 
 
   struct stat sb;
   int j;
+  int nlines = 0;
   int n = INTEGER(nSkip)[0];
+  int maxLines = INTEGER(sMaxLines)[0];
   int ch, fd, match;
   wchar_t termchar;
   unsigned char *back, *front, *true_back;
@@ -126,10 +129,12 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sDflag) 
   }
 
   true_back = front;
+
   for (; true_back < back && compare(keyEnd, true_back, back) != LESS; ++true_back) {
     for (; true_back < back && *true_back != '\n'; ++true_back) {}
+    nlines++;
+    if (nlines == maxLines) break;
   }
-  true_back--;
 
   if (true_back <= front) {
     UNPROTECT(1);
