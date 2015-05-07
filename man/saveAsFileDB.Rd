@@ -4,7 +4,7 @@
 \alias{saveAsFileDB}
 \title{Save a data frame as fileDB file}
 \usage{
-saveAsFileDB(df, file)
+saveAsFileDB(df, file, header = TRUE)
 }
 \arguments{
 \item{df}{data frame to write to disk. First column
@@ -13,6 +13,9 @@ factor as numerics will not sort correctly
 unless they all have the same number of digits}
 
 \item{file}{name of the file to store the results in.}
+
+\item{header}{logical. Should two header rows be appended to
+the output.}
 }
 \description{
 This function saves a data frame as a flat file

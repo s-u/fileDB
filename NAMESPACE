@@ -2,8 +2,9 @@
 
 export(look)
 export(saveAsFileDB)
-export(scan)
-export(search)
+export(scanFile)
+export(searchFile)
 importFrom(iotools,as.output.data.frame)
 importFrom(iotools,dstrsplit)
+importFrom(iotools,mstrsplit)
 useDynLib(fileDB,call_look)

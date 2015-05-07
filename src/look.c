@@ -89,7 +89,7 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sDflag) 
   key = prepkey(CHAR(STRING_ELT(term, 0)),termchar);
   keyEnd = prepkey(CHAR(STRING_ELT(termEnd, 0)),termchar);
 
-  if ((fd = open(file, O_RDONLY, 0)) < 0 || fstat(fd, &sb) || sb.st_size > SIZE_T_MAX) {
+  if ((fd = open(file, O_RDONLY, 0)) < 0 || fstat(fd, &sb)) {
     UNPROTECT(1);
     return output;
   }

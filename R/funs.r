@@ -54,7 +54,7 @@ look = function(file, key, keyEnd=NULL, dflag=FALSE, skip=0L,
 #'
 #' This function provides a means for searching a sorted
 #' flat file constructed by \code{\link{saveAsFileDB}}.
-#' Use \code{link{scan}} for a range query.
+#' Use \code{link{scanFile}} for a range query.
 #'
 #' @importFrom       iotools dstrsplit
 #' @useDynLib        fileDB call_look
@@ -64,8 +64,12 @@ look = function(file, key, keyEnd=NULL, dflag=FALSE, skip=0L,
 #' @param formatter  function which accepts a raw vector and
 #'                   returns the results. If missing, this will
 #'                   by constructed via the file metadata.
+#' @param header     logical. Whether file has a head of information,
+#'                   as supplied by the function saveAsFileDB. When
+#'                   missing, will be infered from the first line of
+#'                   the file.
 #' @export
-search = function(file, key, formatter) {
+searchFile = function(file, key, formatter, header) {
   file = Sys.glob(file[[1]])
   key = key[[1]]
 
@@ -77,13 +81,21 @@ search = function(file, key, formatter) {
     warning("Key truncated; only using first key")
   }
 
-  # Read metadata
+  # Header / Metadata
+  h = readLines(file,2L)
+  if (missing(header)) {
+    header = (substr(h[1],1L,3L) == "###")
+  } else header = as.logical(header[[1]])
+
   if (missing(formatter)) {
-    h = readLines("test.txt",2L)
-    h[1] = substr(h[1],4L, nchar(h[1]))
-    h = strsplit(h,"\\|")
-    names(h[[1]]) = h[[2]]
-    formatter = function(v) iotools::dstrsplit(v, col_types=h[[1]])
+    if (!header)
+      formatter = function(v) iotools::mstrsplit(v)
+    else {
+      h[1] = substr(h[1],4L, nchar(h[1]))
+      h = strsplit(h,"\\|")
+      names(h[[1]]) = h[[2]]
+      formatter = function(v) iotools::dstrsplit(v, col_types=h[[1]])
+    }
   }
 
   z = .Call(call_look, file, key, key, 2L, 0L)
@@ -96,7 +108,7 @@ search = function(file, key, formatter) {
 #' flat file constructed by \code{\link{saveAsFileDB}},
 #' returning all rows with prefixes between two keys.
 #'
-#' @importFrom       iotools dstrsplit
+#' @importFrom       iotools dstrsplit mstrsplit
 #' @useDynLib        fileDB call_look
 #' @param file       name of the file to search within
 #' @param keyStart   a length one character vector; the key
@@ -108,8 +120,12 @@ search = function(file, key, formatter) {
 #' @param formatter  function which accepts a raw vector and
 #'                   returns the results. If missing, this will
 #'                   by constructed via the file metadata.
+#' @param header     logical. Whether file has a head of information,
+#'                   as supplied by the function saveAsFileDB. When
+#'                   missing, will be infered from the first line of
+#'                   the file.
 #' @export
-scan = function(file, keyStart, keyEnd, formatter) {
+scanFile = function(file, keyStart, keyEnd, formatter, header) {
   file = Sys.glob(file[[1]])
   keyStart = keyStart[[1]]
 
@@ -126,16 +142,24 @@ scan = function(file, keyStart, keyEnd, formatter) {
     warning("Key truncated; only using first keyEnd")
   }
 
-  # Read metadata
+  # Header / Metadata
+  h = readLines(file,2L)
+  if (missing(header)) {
+    header = (substr(h[1],1L,3L) == "###")
+  } else header = as.logical(header[[1]])
+
   if (missing(formatter)) {
-    h = readLines("test.txt",2L)
-    h[1] = substr(h[1],4L, nchar(h[1]))
-    h = strsplit(h,"\\|")
-    names(h[[1]]) = h[[2]]
-    formatter = function(v) iotools::dstrsplit(v, col_types=h[[1]])
+    if (!header)
+      formatter = function(v) iotools::mstrsplit(v)
+    else {
+      h[1] = substr(h[1],4L, nchar(h[1]))
+      h = strsplit(h,"\\|")
+      names(h[[1]]) = h[[2]]
+      formatter = function(v) iotools::dstrsplit(v, col_types=h[[1]])
+    }
   }
 
-  z = .Call(call_look, file, keyStart, keyEnd, 2L, 0L)
+  z = .Call(call_look, file, keyStart, keyEnd, 2L*header, 0L)
   formatter(z)
 }
 
@@ -156,8 +180,10 @@ scan = function(file, keyStart, keyEnd, formatter) {
 #'                   factor as numerics will not sort correctly
 #'                   unless they all have the same number of digits
 #' @param file       name of the file to store the results in.
+#' @param header     logical. Should two header rows be appended to
+#'                   the output.
 #' @export
-saveAsFileDB = function(df, file) {
+saveAsFileDB = function(df, file, header=TRUE) {
   if (!is.data.frame(df))
     stop("df must be a data frame")
 
@@ -177,12 +203,14 @@ saveAsFileDB = function(df, file) {
     stop("First column, the one which is sorted on",
          "must be of type 'character' or 'factor'")
 
-  writeBin(charToRaw("###"), con)
-  writeBin(charToRaw(paste(classes,collapse="|")), con)
-  writeBin(charToRaw("\n"), con)
+  if (header) {
+    writeBin(charToRaw("###"), con)
+    writeBin(charToRaw(paste(classes,collapse="|")), con)
+    writeBin(charToRaw("\n"), con)
 
-  writeBin(charToRaw(paste(names(df),collapse="|")), con)
-  writeBin(charToRaw("\n"), con)
+    writeBin(charToRaw(paste(names(df),collapse="|")), con)
+    writeBin(charToRaw("\n"), con)
+  }
 
   writeBin(r, con)
 }
