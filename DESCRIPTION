@@ -13,5 +13,5 @@ Description: Constructs a plain text, pipe-deliminated file from an R data
   frame that allows for fast searching via binary search on a primary key.
   Scan queries are supported, as is reading the resulting data set using
   standard methods for reading deliminated files.
-License: GPL-2 + LICENSE
+License: GPL-2
 Imports: iotools
