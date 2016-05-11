@@ -51,6 +51,7 @@
 #include <unistd.h>
 #include <wchar.h>
 #include <wctype.h>
+#include <errno.h>
 
 #define EQUAL   0
 #define GREATER   1
@@ -78,7 +79,7 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sMaxLine
   int maxLines = INTEGER(sMaxLines)[0];
   int ch, fd, match;
   wchar_t termchar;
-  unsigned char *back, *front, *true_back;
+  unsigned char *back, *front, *true_back, *head;
   const char *file;
   wchar_t *key;
   wchar_t *keyEnd;
@@ -101,8 +102,9 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sMaxLine
     UNPROTECT(1);
     return output;
   }
-  if ((front = mmap(NULL, (size_t)sb.st_size, PROT_READ, MAP_SHARED, fd, (off_t)0)) == MAP_FAILED) {
+  if ((head = front = mmap(NULL, (size_t)sb.st_size, PROT_READ, MAP_SHARED, fd, (off_t)0)) == MAP_FAILED) {
     UNPROTECT(1);
+    Rf_error("Failed to mmap %s: %s", file, strerror(errno));
     return output;
   }
 
@@ -114,6 +116,7 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sMaxLine
     front = memchr(front,'\n',back - front) + 1;
     if (front == NULL) {
       UNPROTECT(1);
+      munmap(head, back - head);
       return output;
     }
   }
@@ -124,6 +127,7 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sMaxLine
   close(fd);
 
   if (front == NULL) {
+    munmap(head, back - head);
     UNPROTECT(1);
     return output;
   }
@@ -138,6 +142,7 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sMaxLine
 
   if (true_back <= front) {
     UNPROTECT(1);
+    munmap(head, back - head);
     return output;
   }
 
@@ -146,6 +151,7 @@ SEXP call_look(SEXP filename, SEXP term, SEXP termEnd, SEXP nSkip, SEXP sMaxLine
   memcpy(output_p, front, true_back - front);
 
   UNPROTECT(2);
+  munmap(head, back - head);
   return output;
 }
 
